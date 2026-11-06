@@ -11,6 +11,8 @@ import { stateColor, layerName } from './render/palette.js';
 import { addLights } from './render/lights.js';
 import { Economy } from './game/Economy.js';
 import { Simulation } from './game/Simulation.js';
+import { ServerClient } from './net/ServerClient.js';
+import { Online } from './game/Online.js';
 
 const $ = (id) => document.getElementById(id);
 const fmt = (n) => Math.floor(n).toLocaleString('sk-SK');
@@ -24,13 +26,19 @@ const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 1e5);
 addLights(scene);
 
-const state = new ShellState(EDGE);
+// online, ak beží server (shade.sk), inak lokálny režim so simulovanými hráčmi
+const net = new ServerClient();
+const hello = await net.hello();
+const state = new ShellState(hello ? hello.cube.edge : EDGE);
+if (hello) { state.setLayer(hello.cube.layer); state.mined = hello.cube.mined; }
 const far = new FarCube(scene, state);
 const patch = new NearPatch(scene, state);
 const fx = new Effects(scene);
 const rig = new CameraRig(camera, canvas, () => state.size);
 const eco = new Economy();
 const sim = new Simulation(state);
+let online = null;
+if (hello) eco.applyServer(hello.player);
 
 // ---------- UI ----------
 const feedEl = $('feed');
@@ -59,9 +67,12 @@ for (const [id, u] of Object.entries(Economy.UPGRADES)) {
   b.type = 'button';
   b.className = 'btn';
   b.innerHTML = `<span><b>${u.name} <span class="lvl"></span></b><small></small></span><span class="c"></span>`;
-  b.addEventListener('click', () => {
+  b.addEventListener('click', async () => {
     const before = eco.tier;
-    if (!eco.buy(id)) return;
+    if (online) {
+      if (!eco.canBuy(id)) return;
+      try { await online.buy(id); } catch { log('Nákup sa nepodaril, skús to znova'); renderHud(); return; }
+    } else if (!eco.buy(id)) return;
     if (id === 'pickaxe' && eco.tier !== before) log(`<span class="me">Ty</span> máš nový krompáč: <b>${eco.tier.name}</b> (${eco.tier.w}×${eco.tier.h})`);
     else if (id === 'miners') log(`<span class="me">Ty</span> si najal tieňového baníka`);
     renderHud();
@@ -71,7 +82,8 @@ for (const [id, u] of Object.entries(Economy.UPGRADES)) {
 }
 
 $('lcount').textContent = fmt(state.layerCount);
-$('edge').textContent = `${fmt(EDGE)} × ${fmt(EDGE)} × ${fmt(EDGE)}`;
+$('edge').textContent = `${fmt(state.edge)} × ${fmt(state.edge)} × ${fmt(state.edge)}`;
+if (hello) $('mode').hidden = true;
 
 function renderHud() {
   $('dust').textContent = fmt(eco.dust);
@@ -86,7 +98,7 @@ function renderHud() {
     b.disabled = !eco.canBuy(id);
   }
   renderShop();
-  $('online').textContent = fmt(sim.online);
+  $('online').textContent = fmt(online ? onlineCount : sim.online);
   $('lidx').textContent = fmt(state.layer + 1);
   $('lname').textContent = layerName(state.depth01);
   const pct = state.progress() * 100;
@@ -122,6 +134,7 @@ function strike(f, u, v, dmg, who, showFx, effect = 'basic') {
 
 function checkLayer(who) {
   if (!state.isLayerDone()) return;
+  if (online) { online.sync(); return; } // vrstvu posúva server
   const name = who === 'me' ? '<span class="me">Ty</span>' : `<b>${who}</b>`;
   if (state.isCore) {
     log(`${name} rozbil jadro a otvoril stred kocky`);
@@ -145,7 +158,15 @@ for (const [id, e] of Object.entries(BREAK_EFFECTS)) {
   buy.type = 'button';
   buy.className = 'btn';
   buy.innerHTML = `<span><b>${e.name}</b></span><span class="c"></span>`;
-  buy.addEventListener('click', () => {
+  buy.addEventListener('click', async () => {
+    if (online) {
+      const had = eco.ownedEffects.has(id);
+      if (!had && eco.dust < eco.effectPrice(id)) return;
+      try { await online.buy('effect:' + id); } catch { log('Nákup sa nepodaril, skús to znova'); return; }
+      if (!had) log(`<span class="me">Ty</span> si kúpil efekt <b>${e.name}</b>`);
+      renderHud();
+      return;
+    }
     const r = eco.useEffect(id);
     if (r === 'bought') log(`<span class="me">Ty</span> si kúpil efekt <b>${e.name}</b>`);
     renderHud();
@@ -186,8 +207,10 @@ rig.onClick = (x, y) => {
   if (!rig.near) { dive = { x, y, n: 26 }; return; }
   if (!patch.contains(hit.f, hit.u, hit.v)) return;
   const before = eco.dust;
-  for (const [du, dv] of eco.footprint()) strike(hit.f, hit.u + du, hit.v + dv, eco.power, 'me', true, eco.effect);
+  let any = false;
+  for (const [du, dv] of eco.footprint()) if (strike(hit.f, hit.u + du, hit.v + dv, eco.power, 'me', true, eco.effect)) any = true;
   const gained = eco.dust - before;
+  if (online && any) online.click(hit.f, hit.u, hit.v, gained);
   const rect = canvas.getBoundingClientRect();
   if (gained > 0) floater(x - rect.left, y - rect.top, '+' + fmt(gained));
   checkLayer('me');
@@ -226,15 +249,15 @@ function frame(now) {
     patch.focus(hit.f, hit.u, hit.v);
     patch.setActive(true);
     far.setWindow(patch.f, patch.u0, patch.v0, patch.u0 + patch.w, patch.v0 + patch.w);
-    sim.ensureNearby(patch);
+    if (!online) sim.ensureNearby(patch);
   } else {
     patch.setActive(false);
     far.setWindow(-1);
   }
   if (hoverReq && rig.pointers.size === 0) { patch.setHover(rig.pickCell(hoverReq[0], hoverReq[1]), eco.tier.w, eco.tier.h); hoverReq = null; }
 
-  // ostatní hráči
-  sim.step(dt, (f, u, v, name, effect) => {
+  // ostatní hráči (v online režime prídu zo servera)
+  if (!online) sim.step(dt, (f, u, v, name, effect) => {
     const res = strike(f, u, v, 1, name, patch.active && patch.contains(f, u, v), effect);
     if (res?.killed) {
       if (patch.contains(f, u, v) && Math.random() < 0.04) log(`<b>${name}</b> ťaží kúsok od teba`);
@@ -243,8 +266,8 @@ function frame(now) {
     return res;
   });
 
-  // tvoji baníci
-  minerAcc += eco.miners * dt;
+  // tvoji baníci (v online režime ťažia na serveri)
+  if (!online) minerAcc += eco.miners * dt;
   while (minerAcc >= 1) {
     minerAcc--;
     const s = state.size;
@@ -265,9 +288,36 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 
-log('Vitaj v Shade. Priblíž sa ku kocke a začni ťažiť.');
+// ---------- server ----------
+let onlineCount = 0;
+if (hello) {
+  online = new Online(net, state, eco, patch, {
+    onTiles: () => { patch.dirty = true; },
+    onLayer: () => { far.rebuild(); patch.reset(); renderHud(); },
+    onBreak: (f, u, v, effect) => {
+      if (!patch.active || !patch.contains(f, u, v)) return;
+      // rozbitia z posledných sekúnd rozložíme v čase, aby nepraskli všetky naraz
+      setTimeout(() => {
+        cellCenter(f, u, v, state.size, 0, tmpPos);
+        (BREAK_EFFECTS[effect] || BREAK_EFFECTS.basic).play(fx, tmpPos, FACES[f].n, stateColor(state, 0, tmpCol), state.isCore);
+      }, Math.random() * 1500);
+    },
+    onEvent: (kind, text) => log(escapeHtml(text)),
+    onStatus: (r) => { onlineCount = r.online; if (r.cube.opened) $('end').hidden = false; },
+    onOffline: () => log('Spojenie so serverom vypadlo, skúšam znova…'),
+  });
+  online.start();
+}
+
+function escapeHtml(t) {
+  return t.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+}
+
+log(hello
+  ? `Vitaj v Shade, <b>${escapeHtml(eco.name)}</b>. Ťažíš spolu so všetkými ostatnými.`
+  : 'Vitaj v Shade. Priblíž sa ku kocke a začni ťažiť.');
 renderHud();
 requestAnimationFrame(frame);
 
 // prístup na ladenie z konzoly
-window.shade = { state, rig, eco, patch, checkLayer };
+window.shade = { state, rig, eco, patch, checkLayer, get online() { return online; } };

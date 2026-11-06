@@ -99,6 +99,66 @@ export class ShellState {
 
   isLayerDone() { return this.mined >= this.total; }
 
+  /** Prepne na vrstvu zo servera (všetko lokálne sa zahodí). */
+  setLayer(layer) {
+    this.layer = layer;
+    this.resetLayer();
+  }
+
+  /** Nahradí celú dlaždicu stavom zo servera a prepočíta prehľad pod ňou. */
+  setTile(f, tx, ty, data) {
+    const k = this.key(f, tx, ty);
+    const prev = this.tiles.get(k);
+    const s = this.size, R = this.overviewRes;
+    const u0 = tx * TILE, v0 = ty * TILE;
+    for (let y = 0; y < TILE; y++) {
+      const v = v0 + y;
+      if (v >= s) break;
+      for (let x = 0; x < TILE; x++) {
+        const u = u0 + x;
+        if (u >= s) break;
+        const i = y * TILE + x;
+        const was = prev ? prev[i] === MINED : false;
+        const now = data[i] === MINED;
+        if (was === now) continue;
+        const d = now ? 1 : -1;
+        this.mined += d;
+        const ti = Math.min(R - 1, Math.floor((v * R) / s)) * R + Math.min(R - 1, Math.floor((u * R) / s));
+        const c = (this.overviewCount[f][ti] = Math.max(0, this.overviewCount[f][ti] + d));
+        this.overview[f][ti] = Math.min(255, Math.round((255 * c) / this.cellsPerTexel));
+        this.dirtyOverview.add(f);
+      }
+    }
+    this.tiles.set(k, data);
+  }
+
+  /**
+   * Prehľad z diaľky zo servera: pre každú dlaždicu podiel vyťažených blokov (0..255).
+   * Dlaždice, ktoré máme podrobne (have(f, tx, ty) = true), sa nemenia.
+   */
+  applyOverview(T, bytes, have) {
+    const s = this.size, R = this.overviewRes;
+    if (T !== Math.ceil(s / TILE) || bytes.length !== 6 * T * T) return;
+    for (let f = 0; f < 6; f++) {
+      for (let ty = 0; ty < T; ty++) {
+        for (let tx = 0; tx < T; tx++) {
+          if (have(f, tx, ty)) continue;
+          const val = bytes[f * T * T + ty * T + tx];
+          const x0 = Math.floor((tx * TILE * R) / s), x1 = Math.min(R - 1, Math.floor((Math.min(s, (tx + 1) * TILE) * R - 1) / s));
+          const y0 = Math.floor((ty * TILE * R) / s), y1 = Math.min(R - 1, Math.floor((Math.min(s, (ty + 1) * TILE) * R - 1) / s));
+          const cnt = Math.round((val / 255) * this.cellsPerTexel);
+          for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
+            const i = y * R + x;
+            if (this.overview[f][i] === val) continue;
+            this.overview[f][i] = val;
+            this.overviewCount[f][i] = cnt;
+            this.dirtyOverview.add(f);
+          }
+        }
+      }
+    }
+  }
+
   advanceLayer() {
     if (this.isCore) return false;
     this.layer++;

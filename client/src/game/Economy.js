@@ -9,6 +9,15 @@ export class Economy {
     this.effect = 'basic';
   }
 
+  /** Stav hráča zo servera (online režim). */
+  applyServer(p) {
+    this.name = p.name;
+    this.dust = p.dust;
+    this.levels = { pickaxe: p.levels.pickaxe, miners: p.levels.miners };
+    this.effect = p.effect;
+    this.ownedEffects = new Set(p.effects);
+  }
+
   maxLevel(id) { return MAX_LEVELS[id]; }
   isMaxed(id) { return this.levels[id] >= MAX_LEVELS[id]; }
 

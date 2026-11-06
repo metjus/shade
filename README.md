@@ -2,7 +2,7 @@
 
 Prehliadačová mining hra pre [shade.sk](https://shade.sk). Všetci hráči spolu ťažia jednu obrovskú tieňovú kocku, vrstvu po vrstve, až k tajomstvu v strede.
 
-Toto je **prototyp (fáza 0)**: beží iba v prehliadači, bez servera, a ostatní hráči sú simulovaní.
+Hra má dva režimy. Keď vedľa `index.html` beží server (`server/`, PHP + MySQL), všetci ťažia jednu spoločnú kocku a postup sa ukladá. Bez servera (napr. otvorená ako súbor alebo ukážka) beží lokálne so simulovanými hráčmi.
 
 ## Spustenie
 
@@ -49,15 +49,19 @@ client/
     render/CameraRig.js  kamera: otáčanie, približovanie, posun po stene
     render/lights.js     spoločné svetlá pre bloky aj steny
     game/Economy.js      prach, krompáč (level → sila a plocha), baníci
-    game/Simulation.js   simulovaní hráči (neskôr dáta zo servera)
+    game/Simulation.js   simulovaní hráči (len lokálny režim)
+    game/Online.js       online režim: dávky kliknutí, dlaždice a rozbitia ostatných zo servera
+    net/ServerClient.js  volania API, token hráča
+
+server/                PHP + MySQL server, návod na nasadenie v server/README.md
 ```
 
 ## Známe zjednodušenia prototypu
 
 - Hranové bloky patria každej stene zvlášť (na hranách sa počítajú dvakrát).
-- Ekonomiku a zásahy počíta klient. V hre ich bude počítať server (PHP + MySQL na Hostcreators).
-- Žiadne účty, ukladanie ani skutočné pripojenie hráčov.
+- V lokálnom režime všetko počíta prehliadač. V online režime rozhoduje server, prehliadač len hneď ukáže výsledok.
+- Účty sú zatiaľ len hosťovské (token v prehliadači). Prihlásenie príde neskôr.
 
 ## Ďalší krok
 
-Server: PHP API `/api/tiles` (stav dlaždíc), `/api/sync` (dávka úderov každých 5 až 10 s), `/api/cube` (celkový stav vrstvy) a MySQL schéma. Pozri koncept hry.
+Nasadiť server na Hostcreators (`server/README.md`), potom aliancie, tajomstvo v strede a preklady (EN).
