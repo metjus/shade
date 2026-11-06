@@ -57,9 +57,13 @@ for (const [id, u] of Object.entries(Economy.UPGRADES)) {
   const b = document.createElement('button');
   b.type = 'button';
   b.className = 'btn';
-  b.innerHTML = `<span><b>${u.name}</b><small>${u.desc}</small></span><span class="c"></span>`;
+  b.innerHTML = `<span><b>${u.name}</b><small></small></span><span class="c"></span>`;
   b.addEventListener('click', () => {
-    if (eco.buy(id)) { log(`<span class="me">Ty</span> si kúpil: ${u.name.toLowerCase()}`); renderHud(); }
+    const before = eco.tier;
+    if (!eco.buy(id)) return;
+    if (id === 'pickaxe' && eco.tier !== before) log(`<span class="me">Ty</span> máš nový krompáč: <b>${eco.tier.name}</b> (${eco.tier.w}×${eco.tier.h})`);
+    else if (id === 'miners') log(`<span class="me">Ty</span> si najal tieňového baníka`);
+    renderHud();
   });
   upEl.appendChild(b);
   buttons[id] = b;
@@ -71,13 +75,12 @@ $('edge').textContent = `${fmt(EDGE)} × ${fmt(EDGE)} × ${fmt(EDGE)}`;
 function renderHud() {
   $('dust').textContent = fmt(eco.dust);
   $('power').textContent = eco.power;
-  const side = 2 * eco.reach + 1;
-  $('reach').textContent = `${side}×${side}`;
+  $('reach').textContent = `${eco.tier.w}×${eco.tier.h}`;
+  $('tier').textContent = eco.tier.name;
   $('miners').textContent = eco.miners;
   for (const [id, b] of Object.entries(buttons)) {
-    const u = Economy.UPGRADES[id];
-    const maxed = u.max != null && eco.levels[id] >= u.max;
-    b.querySelector('.c').textContent = maxed ? 'max' : fmt(eco.cost(id));
+    b.querySelector('small').textContent = eco.describe(id);
+    b.querySelector('.c').textContent = fmt(eco.cost(id));
     b.disabled = !eco.canBuy(id);
   }
   $('online').textContent = fmt(sim.online);
@@ -137,13 +140,9 @@ rig.onClick = (x, y) => {
   if (!hit) return;
   if (!rig.near) { dive = { x, y, n: 26 }; return; }
   if (!patch.contains(hit.f, hit.u, hit.v)) return;
-  let gained = 0;
-  const r = eco.reach;
   const before = eco.dust;
-  for (let dv = -r; dv <= r; dv++) for (let du = -r; du <= r; du++) {
-    strike(hit.f, hit.u + du, hit.v + dv, eco.power, 'me', true);
-  }
-  gained = eco.dust - before;
+  for (const [du, dv] of eco.footprint()) strike(hit.f, hit.u + du, hit.v + dv, eco.power, 'me', true);
+  const gained = eco.dust - before;
   const rect = canvas.getBoundingClientRect();
   if (gained > 0) floater(x - rect.left, y - rect.top, '+' + fmt(gained));
   checkLayer('me');
@@ -187,7 +186,7 @@ function frame(now) {
     patch.setActive(false);
     far.setWindow(-1);
   }
-  if (hoverReq && rig.pointers.size === 0) { patch.setHover(rig.pickCell(hoverReq[0], hoverReq[1])); hoverReq = null; }
+  if (hoverReq && rig.pointers.size === 0) { patch.setHover(rig.pickCell(hoverReq[0], hoverReq[1]), eco.tier.w, eco.tier.h); hoverReq = null; }
 
   // ostatní hráči
   sim.step(dt, (f, u, v, name) => {

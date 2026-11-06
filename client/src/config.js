@@ -38,3 +38,21 @@ function clampEven(n) {
   n = Math.max(8, Math.min(8192, n));
   return n % 2 ? n + 1 : n;
 }
+
+// Krompáč: každý level pridá +1 silu úderu. Na týchto leveloch sa zmení na lepší krompáč,
+// ktorý jedným úderom zasiahne viac blokov (šírka × výška plochy).
+// Toto je hlavné miesto na ladenie tempa ťaženia.
+export const PICKAXE_TIERS = [
+  { level: 0, name: 'Drevený', w: 1, h: 1 },
+  { level: 5, name: 'Železný', w: 2, h: 1 },
+  { level: 10, name: 'Oceľový', w: 2, h: 2 },
+  { level: 20, name: 'Obsidiánový', w: 3, h: 3 },
+  { level: 35, name: 'Tieňový', w: 4, h: 4 },
+  { level: 50, name: 'Prázdnotový', w: 5, h: 5 },
+];
+
+// Ceny vylepšení: cena = base × mult ^ level
+export const UPGRADE_COSTS = {
+  pickaxe: { base: 15, mult: 1.22 },
+  miners: { base: 40, mult: 1.6 },
+};

@@ -150,10 +150,16 @@ export class NearPatch {
     return f === this.f && u >= this.u0 && v >= this.v0 && u < this.u0 + this.w && v < this.v0 + this.w;
   }
 
-  setHover(hit) {
+  /** Obrys plochy, ktorú zasiahne úder (w × h blokov podľa krompáča). */
+  setHover(hit, w = 1, h = 1) {
     const st = this.state;
     if (!hit || !this.active || !this.contains(hit.f, hit.u, hit.v) || st.isMined(hit.f, hit.u, hit.v)) { this.hover.visible = false; return; }
+    const F = FACES[hit.f];
     cellCenter(hit.f, hit.u, hit.v, st.size, 0, this.hover.position);
+    const ou = -Math.floor((w - 1) / 2) + (w - 1) / 2, ov = -Math.floor((h - 1) / 2) + (h - 1) / 2;
+    this.hover.position.addScaledVector(F.a, ou).addScaledVector(F.b, ov);
+    const abs = (v) => new THREE.Vector3(Math.abs(v.x), Math.abs(v.y), Math.abs(v.z));
+    this.hover.scale.copy(abs(F.n)).add(abs(F.a).multiplyScalar(w)).add(abs(F.b).multiplyScalar(h));
     this.hover.visible = true;
   }
 

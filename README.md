@@ -39,7 +39,7 @@ Kocka má 4096 × 4096 × 4096 ≈ 68,7 miliardy blokov, podobne ako Curiosity (
 client/
   index.html
   src/
-    config.js            veľkosť kocky, dlaždice, životy a odmeny blokov
+    config.js            veľkosť kocky, dlaždice, životy a odmeny blokov, krompáče a ceny (ladenie tempa)
     main.js              scéna, herná slučka, HUD
     world/faces.js       súradnice stien, zásah lúča do kocky
     world/ShellState.js  stav vrstvy po dlaždiciach
@@ -48,7 +48,7 @@ client/
     render/Effects.js    úlomky a záblesky
     render/CameraRig.js  kamera: otáčanie, približovanie, posun po stene
     render/lights.js     spoločné svetlá pre bloky aj steny
-    game/Economy.js      prach a vylepšenia
+    game/Economy.js      prach, krompáč (level → sila a plocha), baníci
     game/Simulation.js   simulovaní hráči (neskôr dáta zo servera)
 ```
 

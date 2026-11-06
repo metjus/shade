@@ -31,6 +31,7 @@ html, body { height: 100%; margin: 0; background: var(--bg); color: var(--fg); f
 .v { font-family: var(--display); font-size: 26px; font-variant-numeric: tabular-nums; }
 .v.small { font-size: 18px; }
 .v.dust { color: var(--cyan); }
+.v .dim { color: var(--muted); font-size: 14px; }
 .upgrades { display: flex; flex-direction: column; gap: 6px; }
 .btn { font: inherit; color: var(--fg); background: #1d1a29; border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; cursor: pointer;
   display: flex; justify-content: space-between; align-items: center; gap: 8px; text-align: left; }
