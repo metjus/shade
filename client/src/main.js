@@ -5,6 +5,7 @@ import { FACES, cellCenter } from './world/faces.js';
 import { FarCube } from './render/FarCube.js';
 import { NearPatch } from './render/NearPatch.js';
 import { Effects } from './render/Effects.js';
+import { BREAK_EFFECTS } from './render/breakEffects.js';
 import { CameraRig } from './render/CameraRig.js';
 import { layerColor, layerName } from './render/palette.js';
 import { addLights } from './render/lights.js';
@@ -100,7 +101,7 @@ const tmpPos = new THREE.Vector3();
 const tmpCol = new THREE.Color();
 
 /** Jeden úder do bloku. who = 'me' alebo meno simulovaného hráča. Vráti výsledok zo ShellState. */
-function strike(f, u, v, dmg, who, showFx) {
+function strike(f, u, v, dmg, who, showFx, effect = 'basic') {
   const res = state.hit(f, u, v, dmg);
   if (!res) return null;
   if (showFx) {
@@ -108,9 +109,7 @@ function strike(f, u, v, dmg, who, showFx) {
     layerColor(state.depth01, tmpCol);
     const n = FACES[f].n;
     if (res.killed) {
-      const core = state.isCore;
-      fx.burst(tmpPos, n, tmpCol, core ? 40 : 10, core ? 0.22 : 0.11, core ? 0.2 : 0.13);
-      fx.flash(tmpPos, tmpCol, core);
+      (BREAK_EFFECTS[effect] || BREAK_EFFECTS.basic).play(fx, tmpPos, n, tmpCol, state.isCore);
     } else {
       fx.burst(tmpPos, n, tmpCol, who === 'me' ? 4 : 2, 0.05, 0.06);
     }
@@ -134,6 +133,33 @@ function checkLayer(who) {
   sim.resize();
 }
 
+// Efekt rozbitia, ktorý má hráč zvolený (neskôr z kozmetiky v profile).
+let myEffect = 'basic';
+
+// ---------- TEST: dočasné tlačidlá na vyskúšanie efektov rozbitia (odstrániť pred spustením) ----------
+{
+  const box = $('fxtest');
+  for (const [id, e] of Object.entries(BREAK_EFFECTS)) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'chip';
+    b.textContent = e.name;
+    b.setAttribute('aria-pressed', String(id === myEffect));
+    b.addEventListener('click', () => {
+      myEffect = id;
+      box.querySelectorAll('.chip').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+      // ukážka priamo na stene, na ktorú sa pozeráš (blok sa neťaží)
+      const h = rig.focusHit;
+      if (h) {
+        cellCenter(h.f, h.u, h.v, state.size, 0, tmpPos);
+        e.play(fx, tmpPos, FACES[h.f].n, layerColor(state.depth01, tmpCol), false);
+      }
+    });
+    box.appendChild(b);
+  }
+}
+// ---------- /TEST ----------
+
 let dive = null;
 rig.onClick = (x, y) => {
   const hit = rig.pickCell(x, y);
@@ -141,7 +167,7 @@ rig.onClick = (x, y) => {
   if (!rig.near) { dive = { x, y, n: 26 }; return; }
   if (!patch.contains(hit.f, hit.u, hit.v)) return;
   const before = eco.dust;
-  for (const [du, dv] of eco.footprint()) strike(hit.f, hit.u + du, hit.v + dv, eco.power, 'me', true);
+  for (const [du, dv] of eco.footprint()) strike(hit.f, hit.u + du, hit.v + dv, eco.power, 'me', true, myEffect);
   const gained = eco.dust - before;
   const rect = canvas.getBoundingClientRect();
   if (gained > 0) floater(x - rect.left, y - rect.top, '+' + fmt(gained));
@@ -189,8 +215,8 @@ function frame(now) {
   if (hoverReq && rig.pointers.size === 0) { patch.setHover(rig.pickCell(hoverReq[0], hoverReq[1]), eco.tier.w, eco.tier.h); hoverReq = null; }
 
   // ostatní hráči
-  sim.step(dt, (f, u, v, name) => {
-    const res = strike(f, u, v, 1, name, patch.active && patch.contains(f, u, v));
+  sim.step(dt, (f, u, v, name, effect) => {
+    const res = strike(f, u, v, 1, name, patch.active && patch.contains(f, u, v), effect);
     if (res?.killed) {
       if (patch.contains(f, u, v) && Math.random() < 0.04) log(`<b>${name}</b> ťaží kúsok od teba`);
       checkLayer(name);
@@ -206,7 +232,7 @@ function frame(now) {
     let f, u, v;
     if (patch.active) { f = patch.f; u = patch.u0 + ((Math.random() * patch.w) | 0); v = patch.v0 + ((Math.random() * patch.w) | 0); }
     else { f = (Math.random() * 6) | 0; u = (Math.random() * s) | 0; v = (Math.random() * s) | 0; }
-    strike(f, u, v, 1, 'me', patch.active);
+    strike(f, u, v, 1, 'me', patch.active, myEffect);
     checkLayer('me');
   }
 

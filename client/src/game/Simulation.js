@@ -1,6 +1,13 @@
 // Simulovaní hráči. V skutočnej hre sem prídu zmeny zo servera (polling každých 5 až 10 s).
 
+import { EFFECT_IDS } from '../render/breakEffects.js';
+
 const NAMES = ['Marek', 'Zuzka', 'Tomáš_CZ', 'Lucka', 'Peťo', 'Jirka', 'Bára', 'Šimon', 'Katka', 'Ondra', 'Dominik', 'Nela'];
+
+// Väčšina hráčov má základný efekt, niektorí majú kozmetický.
+function randomEffect() {
+  return Math.random() < 0.5 ? 'basic' : EFFECT_IDS[1 + ((Math.random() * (EFFECT_IDS.length - 1)) | 0)];
+}
 
 export class Simulation {
   constructor(state) {
@@ -21,6 +28,7 @@ export class Simulation {
       v: patch.v0 + 8 + ((Math.random() * (patch.w - 16)) | 0),
       rate: 2 + Math.random() * 3,
       acc: 0,
+      effect: randomEffect(),
     });
     if (this.crews.length > 40) this.crews.shift();
   }
@@ -31,7 +39,7 @@ export class Simulation {
     this.online += Math.round((Math.random() - 0.5) * 3);
     // zvyšok sveta: náhodné partie kdekoľvek na kocke
     while (this.crews.length < 30) {
-      this.crews.push({ name: NAMES[(Math.random() * NAMES.length) | 0], f: (Math.random() * 6) | 0, u: (Math.random() * s) | 0, v: (Math.random() * s) | 0, rate: 3 + Math.random() * 4, acc: 0 });
+      this.crews.push({ name: NAMES[(Math.random() * NAMES.length) | 0], f: (Math.random() * 6) | 0, u: (Math.random() * s) | 0, v: (Math.random() * s) | 0, rate: 3 + Math.random() * 4, acc: 0, effect: randomEffect() });
     }
     for (const c of this.crews) {
       c.acc += c.rate * dt;
@@ -41,7 +49,7 @@ export class Simulation {
         const r = 3;
         const u = Math.max(0, Math.min(s - 1, c.u + ((Math.random() * (2 * r + 1)) | 0) - r));
         const v = Math.max(0, Math.min(s - 1, c.v + ((Math.random() * (2 * r + 1)) | 0) - r));
-        const res = onHit(c.f, u, v, c.name);
+        const res = onHit(c.f, u, v, c.name, c.effect);
         if (!res && Math.random() < 0.3) { c.u = (Math.random() * s) | 0; c.v = (Math.random() * s) | 0; continue; }
         if (!res || Math.random() < 0.05) { c.u = Math.max(0, Math.min(s - 1, c.u + ((Math.random() * 3) | 0) - 1)); c.v = Math.max(0, Math.min(s - 1, c.v + ((Math.random() * 3) | 0) - 1)); }
       }
