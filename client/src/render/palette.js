@@ -1,14 +1,20 @@
 import * as THREE from 'three';
-import { LAYER_PALETTE, LAYER_NAMES } from '../config.js';
+import { LAYER_COLORS, CORE_COLOR, LAYER_NAMES } from '../config.js';
 
-const cols = LAYER_PALETTE.map((h) => new THREE.Color(h));
+const cols = LAYER_COLORS.map((h) => new THREE.Color(h));
+const core = new THREE.Color(CORE_COLOR);
+const black = new THREE.Color(0);
 
-/** Farba vrstvy podľa hĺbky 0..1 (plynulý prechod paletou, jadro má vlastnú farbu). */
-export function layerColor(depth01, out = new THREE.Color()) {
-  if (depth01 >= 1) return out.copy(cols[cols.length - 1]);
-  const x = depth01 * (cols.length - 2);
-  const i = Math.floor(x);
-  return out.copy(cols[i]).lerp(cols[Math.min(i + 1, cols.length - 2)], x - i);
+/** Farba vrstvy podľa jej poradia: farby sa striedajú dokola a smerom k jadru tmavnú. */
+export function layerColorAt(layer, layerCount, out = new THREE.Color()) {
+  if (layer >= layerCount - 1) return out.copy(core);
+  const depth01 = layerCount <= 1 ? 0 : layer / (layerCount - 1);
+  return out.copy(cols[layer % cols.length]).lerp(black, depth01 * 0.45);
+}
+
+/** Farba aktuálnej vrstvy (offset 0) alebo vrstvy pod ňou (offset 1). */
+export function stateColor(st, offset = 0, out = new THREE.Color()) {
+  return layerColorAt(st.layer + offset, st.layerCount, out);
 }
 
 export function layerName(depth01) {

@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { FACES } from '../world/faces.js';
-import { layerColor } from './palette.js';
+import { stateColor } from './palette.js';
 import { lightFor } from './lights.js';
 
 const vertexShader = /* glsl */ `
@@ -51,8 +51,8 @@ export class FarCube {
     for (const m of this.faces) { m.geometry.dispose(); m.material.dispose(); this.group.remove(m); }
     this.faces = [];
     const st = this.state, s = st.size, h = s / 2, R = st.overviewRes;
-    const base = layerColor(st.depth01);
-    const next = st.isCore ? new THREE.Color(0x000000) : layerColor(Math.min(1, (st.layer + 1) / (st.layerCount - 1)));
+    const base = stateColor(st);
+    const next = st.isCore ? new THREE.Color(0x000000) : stateColor(st, 1);
     const hole = next.clone().multiplyScalar(0.55);
 
     for (let f = 0; f < 6; f++) {

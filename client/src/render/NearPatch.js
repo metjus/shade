@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { WINDOW } from '../config.js';
 import { cellCenter, FACES } from '../world/faces.js';
-import { layerColor } from './palette.js';
+import { stateColor } from './palette.js';
 
 const MINED = 255;
 
@@ -176,8 +176,8 @@ export class NearPatch {
 
   rebuild() {
     const st = this.state, s = st.size, f = this.f, F = FACES[f];
-    const base = layerColor(st.depth01);
-    const below = st.isCore ? null : layerColor(Math.min(1, (st.layer + 1) / (st.layerCount - 1))).multiplyScalar(0.8);
+    const base = stateColor(st);
+    const below = st.isCore ? null : stateColor(st, 1).multiplyScalar(0.8);
     const { dummy, color, pos } = this;
     const black = new THREE.Color(0);
     let n = 0;

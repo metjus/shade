@@ -2,9 +2,9 @@
 
 const params = new URLSearchParams(location.search);
 
-// Hrana kocky v blokoch. 4096³ ≈ 68,7 miliardy blokov, približne ako Curiosity (~69 mld.).
+// Hrana kocky v blokoch. 2048³ ≈ 8,6 miliardy blokov (4096 by bolo ≈ 68,7 mld., ako Curiosity).
 // Na testovanie dokončenia vrstvy: ?size=24
-export const EDGE = clampEven(parseInt(params.get('size') || '4096', 10));
+export const EDGE = clampEven(parseInt(params.get('size') || '2048', 10));
 
 // Strana dlaždice (chunku) v blokoch. Stav kocky sa ukladá a posiela po dlaždiciach.
 export const TILE = 64;
@@ -18,8 +18,9 @@ export const NEAR_HEIGHT = 110;
 // Rozlíšenie prehľadovej textúry steny (koľko "pixelov" na stranu).
 export const OVERVIEW_RES = 512;
 
-// Paleta vrstiev od povrchu po jadro (lineárne sa prelína podľa hĺbky).
-export const LAYER_PALETTE = [0x737786, 0x5b5e70, 0x45415a, 0x3a2d66, 0x2c2152, 0x221a40, 0x9a6cff];
+// Farby vrstiev. Každá ďalšia vrstva má ďalšiu farbu v poradí (dokola) a smerom k jadru tmavne.
+export const LAYER_COLORS = [0x737786, 0x3f7a78, 0x8a5a44, 0x5d7046, 0x4a6390, 0x6d4a78, 0x8c7c5a, 0x7a3b4a];
+export const CORE_COLOR = 0x9a6cff;
 
 export const LAYER_NAMES = ['Bridlica', 'Čadič', 'Obsidián', 'Tieňový kryštál', 'Súmrak', 'Prázdnota', 'Jadro'];
 
@@ -34,7 +35,7 @@ export function blockReward(depth01) {
 }
 
 function clampEven(n) {
-  if (!Number.isFinite(n)) n = 4096;
+  if (!Number.isFinite(n)) n = 2048;
   n = Math.max(8, Math.min(8192, n));
   return n % 2 ? n + 1 : n;
 }
@@ -56,3 +57,9 @@ export const UPGRADE_COSTS = {
   pickaxe: { base: 15, mult: 1.22 },
   miners: { base: 40, mult: 1.6 },
 };
+
+// Maximálne levely vylepšení.
+export const MAX_LEVELS = { pickaxe: 60, miners: 50 };
+
+// Obchod: efekty rozbitia a ich cena v tieňovom prachu (v hre môžu byť niektoré aj za skutočné peniaze).
+export const EFFECT_PRICES = { basic: 0, sparks: 2000, frost: 5000, fire: 10000, smoke: 25000, gold: 60000 };

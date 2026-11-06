@@ -7,7 +7,7 @@ import { NearPatch } from './render/NearPatch.js';
 import { Effects } from './render/Effects.js';
 import { BREAK_EFFECTS } from './render/breakEffects.js';
 import { CameraRig } from './render/CameraRig.js';
-import { layerColor, layerName } from './render/palette.js';
+import { stateColor, layerName } from './render/palette.js';
 import { addLights } from './render/lights.js';
 import { Economy } from './game/Economy.js';
 import { Simulation } from './game/Simulation.js';
@@ -58,7 +58,7 @@ for (const [id, u] of Object.entries(Economy.UPGRADES)) {
   const b = document.createElement('button');
   b.type = 'button';
   b.className = 'btn';
-  b.innerHTML = `<span><b>${u.name}</b><small></small></span><span class="c"></span>`;
+  b.innerHTML = `<span><b>${u.name} <span class="lvl"></span></b><small></small></span><span class="c"></span>`;
   b.addEventListener('click', () => {
     const before = eco.tier;
     if (!eco.buy(id)) return;
@@ -80,10 +80,12 @@ function renderHud() {
   $('tier').textContent = eco.tier.name;
   $('miners').textContent = eco.miners;
   for (const [id, b] of Object.entries(buttons)) {
+    b.querySelector('.lvl').textContent = eco.levelText(id);
     b.querySelector('small').textContent = eco.describe(id);
-    b.querySelector('.c').textContent = fmt(eco.cost(id));
+    b.querySelector('.c').textContent = eco.isMaxed(id) ? 'max' : fmt(eco.cost(id));
     b.disabled = !eco.canBuy(id);
   }
+  renderShop();
   $('online').textContent = fmt(sim.online);
   $('lidx').textContent = fmt(state.layer + 1);
   $('lname').textContent = layerName(state.depth01);
@@ -106,7 +108,7 @@ function strike(f, u, v, dmg, who, showFx, effect = 'basic') {
   if (!res) return null;
   if (showFx) {
     cellCenter(f, u, v, state.size, 0, tmpPos);
-    layerColor(state.depth01, tmpCol);
+    stateColor(state, 0, tmpCol);
     const n = FACES[f].n;
     if (res.killed) {
       (BREAK_EFFECTS[effect] || BREAK_EFFECTS.basic).play(fx, tmpPos, n, tmpCol, state.isCore);
@@ -133,32 +135,49 @@ function checkLayer(who) {
   sim.resize();
 }
 
-// Efekt rozbitia, ktorý má hráč zvolený (neskôr z kozmetiky v profile).
-let myEffect = 'basic';
+// ---------- obchod: efekty rozbitia ----------
+const shopEl = $('shop');
+const shopItems = {};
+for (const [id, e] of Object.entries(BREAK_EFFECTS)) {
+  const row = document.createElement('div');
+  row.className = 'shop-item';
+  const buy = document.createElement('button');
+  buy.type = 'button';
+  buy.className = 'btn';
+  buy.innerHTML = `<span><b>${e.name}</b></span><span class="c"></span>`;
+  buy.addEventListener('click', () => {
+    const r = eco.useEffect(id);
+    if (r === 'bought') log(`<span class="me">Ty</span> si kúpil efekt <b>${e.name}</b>`);
+    renderHud();
+  });
+  const prev = document.createElement('button');
+  prev.type = 'button';
+  prev.className = 'chip';
+  prev.textContent = 'Ukážka';
+  prev.title = 'Prehrá efekt na stene, na ktorú sa pozeráš';
+  prev.addEventListener('click', () => {
+    const h = rig.focusHit;
+    if (!h) return;
+    cellCenter(h.f, h.u, h.v, state.size, 0, tmpPos);
+    e.play(fx, tmpPos, FACES[h.f].n, stateColor(state, 0, tmpCol), false);
+  });
+  row.append(buy, prev);
+  shopEl.appendChild(row);
+  shopItems[id] = buy;
+}
 
-// ---------- TEST: dočasné tlačidlá na vyskúšanie efektov rozbitia (odstrániť pred spustením) ----------
-{
-  const box = $('fxtest');
-  for (const [id, e] of Object.entries(BREAK_EFFECTS)) {
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.className = 'chip';
-    b.textContent = e.name;
-    b.setAttribute('aria-pressed', String(id === myEffect));
-    b.addEventListener('click', () => {
-      myEffect = id;
-      box.querySelectorAll('.chip').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
-      // ukážka priamo na stene, na ktorú sa pozeráš (blok sa neťaží)
-      const h = rig.focusHit;
-      if (h) {
-        cellCenter(h.f, h.u, h.v, state.size, 0, tmpPos);
-        e.play(fx, tmpPos, FACES[h.f].n, layerColor(state.depth01, tmpCol), false);
-      }
-    });
-    box.appendChild(b);
+// na mobile je obchod na začiatku zbalený, aby nezakrýval kocku
+if (window.matchMedia('(max-width: 760px)').matches) document.querySelector('.shop').open = false;
+
+function renderShop() {
+  for (const [id, b] of Object.entries(shopItems)) {
+    const owned = eco.ownedEffects.has(id);
+    const active = eco.effect === id;
+    b.querySelector('.c').textContent = active ? 'používaš' : owned ? 'nasadiť' : fmt(eco.effectPrice(id));
+    b.classList.toggle('active', active);
+    b.disabled = !owned && eco.dust < eco.effectPrice(id);
   }
 }
-// ---------- /TEST ----------
 
 let dive = null;
 rig.onClick = (x, y) => {
@@ -167,7 +186,7 @@ rig.onClick = (x, y) => {
   if (!rig.near) { dive = { x, y, n: 26 }; return; }
   if (!patch.contains(hit.f, hit.u, hit.v)) return;
   const before = eco.dust;
-  for (const [du, dv] of eco.footprint()) strike(hit.f, hit.u + du, hit.v + dv, eco.power, 'me', true, myEffect);
+  for (const [du, dv] of eco.footprint()) strike(hit.f, hit.u + du, hit.v + dv, eco.power, 'me', true, eco.effect);
   const gained = eco.dust - before;
   const rect = canvas.getBoundingClientRect();
   if (gained > 0) floater(x - rect.left, y - rect.top, '+' + fmt(gained));
@@ -232,7 +251,7 @@ function frame(now) {
     let f, u, v;
     if (patch.active) { f = patch.f; u = patch.u0 + ((Math.random() * patch.w) | 0); v = patch.v0 + ((Math.random() * patch.w) | 0); }
     else { f = (Math.random() * 6) | 0; u = (Math.random() * s) | 0; v = (Math.random() * s) | 0; }
-    strike(f, u, v, 1, 'me', patch.active, myEffect);
+    strike(f, u, v, 1, 'me', patch.active, eco.effect);
     checkLayer('me');
   }
 

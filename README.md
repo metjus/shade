@@ -17,7 +17,7 @@ npm run build    # vytvorí jeden súbor client/dist/index.html
 
 Parametre v adrese:
 
-- `?size=24` menšia kocka na testovanie dokončenia vrstiev a jadra (predvolene 4096).
+- `?size=24` menšia kocka na testovanie dokončenia vrstiev a jadra (predvolene 2048).
 
 ## Ovládanie
 
@@ -27,7 +27,7 @@ Parametre v adrese:
 
 ## Ako sa kreslí taká veľká kocka
 
-Kocka má 4096 × 4096 × 4096 ≈ 68,7 miliardy blokov, podobne ako Curiosity (~69 miliárd). Nikdy sa nekreslí celá:
+Kocka má 2048 × 2048 × 2048 ≈ 8,6 miliardy blokov (pri hrane 4096 by to bolo ≈ 68,7 miliardy, ako Curiosity). Nikdy sa nekreslí celá:
 
 - **Z diaľky** (`render/FarCube.js`) je každá stena jedna plocha. Mriežku blokov kreslí shader a prehľadová textúra 512 × 512 stmavuje miesta, kde sa už ťažilo.
 - **Zblízka** (`render/NearPatch.js`) sa v okne 96 × 96 blokov okolo miesta, kam sa hráč pozerá, kreslia skutočné 3D bloky s prasklinami. Mimo okna ostáva plocha.
