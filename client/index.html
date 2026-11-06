@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="sk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Shade</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Tektur:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+  <link rel="stylesheet" href="./src/style.css">
+</head>
+<body>
+  <div id="app">
+    <canvas id="scene" aria-label="Kocka Shade"></canvas>
+
+    <header class="top">
+      <div class="brand">
+        <span class="eyebrow">Shade · prototyp</span>
+        <span class="logo">Čo je v strede tieňa?</span>
+      </div>
+      <div class="online"><i></i><span id="online">1 247</span> baníkov online <em id="mode">(simulácia)</em></div>
+    </header>
+
+    <aside class="panel stats" aria-label="Tvoj stav">
+      <div class="stat"><span class="k">Tieňový prach</span><span class="v dust" id="dust">0</span></div>
+      <div class="row">
+        <div class="stat"><span class="k">Sila</span><span class="v small" id="power">1</span></div>
+        <div class="stat"><span class="k">Krompáč</span><span class="v small"><span id="tier">Drevený</span> <span id="reach" class="dim">1×1</span></span></div>
+        <div class="stat"><span class="k">Baníci</span><span class="v small" id="miners">0</span></div>
+      </div>
+      <div class="upgrades" id="upgrades"></div>
+      <details class="shop" open>
+        <summary class="k">Obchod · efekty rozbitia</summary>
+        <div id="shop" class="shop-list"></div>
+      </details>
+    </aside>
+
+    <section class="panel feed" aria-label="Dianie v kocke">
+      <span class="k">Dianie v kocke</span>
+      <ul id="feed"></ul>
+    </section>
+
+    <footer class="bottom">
+      <div class="hint" id="hint">Priblíž kolieskom alebo dvoma prstami k stene a ťaž bloky.</div>
+      <div class="layer">
+        <div class="row"><span>Vrstva <b id="lidx">1</b> z <span id="lcount">2 048</span> · <b id="lname">Bridlica</b></span><span id="lpct">0,000000 %</span></div>
+        <div class="bar"><div id="lbar"></div></div>
+        <div class="row"><span>V kocke zostáva <b id="remaining">68 719 476 736</b> blokov</span><span id="edge"></span></div>
+      </div>
+    </footer>
+
+    <div class="overlay" id="end" hidden>
+      <h2>Jadro otvorené</h2>
+      <p>Tu by hráč, ktorý rozbil posledný blok, uvidel tajomstvo sezóny. Všetci ostatní by dostali novú kapitolu príbehu.</p>
+    </div>
+  </div>
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>
