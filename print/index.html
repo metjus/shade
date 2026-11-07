@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="sk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Shade Print – farebné modely na 3D tlač</title>
+  <meta name="description" content="Generátor organických farebných modelov pripravených na 3D tlač. Export 3MF pre Bambu Studio a OBJ, rozrezanie podľa farieb pre tlač bez AMS.">
+  <link rel="stylesheet" href="css/app.css">
+  <script type="importmap">
+    { "imports": { "three": "./vendor/three.module.min.js", "three/addons/": "./vendor/" } }
+  </script>
+</head>
+<body>
+  <header class="top">
+    <div class="brand"><span class="logo" aria-hidden="true"></span>Shade Print <small>farebné modely na 3D tlač</small></div>
+    <div id="status" class="status" role="status"></div>
+  </header>
+
+  <main class="layout">
+    <aside class="panel" id="panel">
+      <section>
+        <h2>Model</h2>
+        <div id="presets" class="presets"></div>
+      </section>
+
+      <section>
+        <h2>Tvar</h2>
+        <div id="params"></div>
+        <button id="randomize" class="ghost" type="button">Náhodná variácia</button>
+      </section>
+
+      <section>
+        <h2>Farby</h2>
+        <div id="colors" class="colors"></div>
+      </section>
+
+      <section>
+        <h2>Ako budeš tlačiť</h2>
+        <div class="modes" id="modes">
+          <label><input type="radio" name="mode" value="ams" checked><span><b>Viac farieb naraz</b><em>AMS alebo iný multi-material, jeden objekt s dielmi</em></span></label>
+          <label><input type="radio" name="mode" value="split"><span><b>Bez AMS, rozrezať na diely</b><em>každá farba zvlášť, s vôľou a kolíkmi na zlepenie</em></span></label>
+          <label><input type="radio" name="mode" value="single"><span><b>Jedna farba</b><em>celý model ako jeden kus</em></span></label>
+        </div>
+        <div id="splitOptions" class="sub" hidden>
+          <label class="row">Vôľa medzi dielmi <output id="clearanceOut">0.20 mm</output>
+            <input type="range" id="clearance" min="0.05" max="0.5" step="0.05" value="0.2"></label>
+          <label class="row">Spojenie dielov
+            <select id="pinType">
+              <option value="filament">Otvory na kúsok filamentu 1,75 mm</option>
+              <option value="peg">Vytlačený kolík a otvor</option>
+              <option value="none">Bez kolíkov</option>
+            </select></label>
+          <label class="row">Roztiahnutie náhľadu
+            <input type="range" id="explode" min="0" max="1" step="0.01" value="0.35"></label>
+        </div>
+        <label class="row">Kvalita siete
+          <select id="quality">
+            <option value="0.9">Rýchla (náhľad)</option>
+            <option value="0.6" selected>Štandardná</option>
+            <option value="0.42">Jemná (pomalšie)</option>
+          </select></label>
+        <label class="row">Max. počet trojuholníkov
+          <select id="maxTris">
+            <option value="100000">100 tisíc</option>
+            <option value="250000">250 tisíc</option>
+            <option value="500000">500 tisíc</option>
+            <option value="1000000">1 milión</option>
+            <option value="2000000" selected>2 milióny</option>
+          </select></label>
+      </section>
+
+      <section>
+        <h2>Stiahnuť</h2>
+        <div class="exports">
+          <button id="dlBambu" type="button" class="primary">3MF pre Bambu Studio</button>
+          <button id="dl3mf" type="button">3MF s farbami (Orca, Prusa, Bambu)</button>
+          <button id="dlObj" type="button">OBJ (Blender)</button>
+        </div>
+        <p class="hint" id="exportHint"></p>
+      </section>
+    </aside>
+
+    <section class="stage">
+      <div id="viewer" class="viewer"></div>
+      <div class="report" id="report"></div>
+    </section>
+  </main>
+
+  <script type="module" src="js/ui/app.js"></script>
+</body>
+</html>
