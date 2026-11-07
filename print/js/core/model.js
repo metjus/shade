@@ -11,6 +11,7 @@ export const DEFAULT_OPTIONS = {
   mode: 'ams',
   voxel: 0.6, // mm
   maxCells: 3_000_000,
+  maxTriangles: 2_000_000, // whole model; the mesh is coarsened until it fits
   clearance: 0.2, // mm, total gap between split parts
   pinType: 'filament', // 'filament' | 'peg' | 'none'
   filamentDiameter: 1.75,
@@ -21,6 +22,17 @@ export const DEFAULT_OPTIONS = {
 
 export function buildModel(scene, opts = {}) {
   const o = { ...DEFAULT_OPTIONS, ...opts };
+  // Triangle count scales with 1 / voxel², so retry with a coarser voxel until it fits the limit.
+  let res = buildOnce(scene, o);
+  for (let tries = 0; tries < 4 && res.stats.triangles > o.maxTriangles; tries++) {
+    const factor = Math.sqrt(res.stats.triangles / o.maxTriangles) * 1.04;
+    res = buildOnce(scene, { ...o, voxel: res.voxel * factor });
+  }
+  res.stats.limited = res.voxel > o.voxel * 1.001;
+  return res;
+}
+
+function buildOnce(scene, o) {
   const t0 = now();
   const sc = compileScene(scene);
   const P = sc.partCount;
@@ -103,12 +115,13 @@ export function buildModel(scene, opts = {}) {
 
   const tMesh = now();
   const total = parts.reduce((s, p) => s + p.volume, 0);
+  const triangles = parts.reduce((s, p) => s + p.triangles, 0);
   return {
     parts,
     pins,
     voxel: h,
     dims,
-    stats: { volume: total, sampleMs: Math.round(tSample - t0), meshMs: Math.round(tMesh - tSample) },
+    stats: { volume: total, triangles, sampleMs: Math.round(tSample - t0), meshMs: Math.round(tMesh - tSample) },
   };
 }
 

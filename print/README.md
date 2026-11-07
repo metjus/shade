@@ -8,6 +8,7 @@ Webový generátor organických farebných modelov, ktoré sú od začiatku prip
   - *Viac farieb naraz (AMS):* jeden objekt s farebnými dielmi, ktoré sa presne dotýkajú.
   - *Bez AMS, rozrezať na diely:* každá farba je samostatný diel s vôľou (predvolene 0,2 mm) a zarovnávacími kolíkmi. Kolíky sú buď otvory na kúsok filamentu 1,75 mm, alebo vytlačený kolík s otvorom.
   - *Jedna farba:* celý model ako jeden kus.
+- **Limit trojuholníkov:** predvolene 2 milióny za celý model. Keď ho model prekročí, sieť sa automaticky zhrubne, aby sa doň zmestila.
 - **Kontrola tlačiteľnosti:** každá sieť je uzavretá (watertight, manifold), model má rovnú spodnú plochu na podložke a zobrazí sa hmotnosť PLA aj počet kúskov.
 - **Export:**
   - *3MF pre Bambu Studio:* projekt s priradenými filamentmi 1..N v `Metadata/model_settings.config`.

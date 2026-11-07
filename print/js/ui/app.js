@@ -18,12 +18,14 @@ const state = loadState() || {
   voxel: 0.6,
   explode: 0.35,
 };
+state.maxTriangles ??= 2_000_000;
 
 let result = null;
 let reqId = 0;
 let busy = false;
 let pending = false;
 let firstFit = true;
+let startedAt = 0;
 
 const viewer = new Viewer($('viewer'));
 const darkQuery = window.matchMedia('(prefers-color-scheme: dark)');
@@ -118,6 +120,7 @@ function renderMode() {
   $('clearanceOut').textContent = state.clearance.toFixed(2) + ' mm';
   $('pinType').value = state.pinType;
   $('quality').value = String(state.voxel);
+  $('maxTris').value = String(state.maxTriangles);
   $('explode').value = state.explode;
   const hint = {
     ams: 'V Bambu Studiu sa otvorí ako jeden objekt, každý farebný diel má priradený filament 1, 2, 3… podľa poradia farieb vľavo.',
@@ -143,6 +146,7 @@ document.querySelectorAll('input[name=mode]').forEach((r) => r.addEventListener(
 $('clearance').oninput = (e) => { state.clearance = Number(e.target.value); $('clearanceOut').textContent = state.clearance.toFixed(2) + ' mm'; regenerateSoon(); };
 $('pinType').onchange = (e) => { state.pinType = e.target.value; regenerate(); };
 $('quality').onchange = (e) => { state.voxel = Number(e.target.value); regenerate(); };
+$('maxTris').onchange = (e) => { state.maxTriangles = Number(e.target.value); regenerate(); };
 $('explode').oninput = (e) => { state.explode = Number(e.target.value); viewer.setExplode(state.mode === 'split' ? state.explode : 0); saveState(); };
 $('randomize').onclick = () => {
   const p = preset();
@@ -173,12 +177,13 @@ function regenerate() {
   if (busy) { pending = true; return; }
   busy = true;
   pending = false;
+  startedAt = performance.now();
   setStatus('Generujem model…', 'busy');
   worker.postMessage({
     id: ++reqId,
     presetId: state.presetId,
     params: params(),
-    options: { mode: state.mode, voxel: state.voxel, clearance: state.clearance, pinType: state.pinType },
+    options: { mode: state.mode, voxel: state.voxel, clearance: state.clearance, pinType: state.pinType, maxTriangles: state.maxTriangles },
   });
 }
 
@@ -193,7 +198,7 @@ function onResult(e) {
   firstFit = false;
   viewer.setExplode(state.mode === 'split' ? state.explode : 0);
   renderReport();
-  const t = msg.stats.sampleMs + msg.stats.meshMs;
+  const t = performance.now() - startedAt;
   setStatus(`Hotovo za ${(t / 1000).toFixed(1)} s`, 'ok');
 }
 
@@ -245,7 +250,7 @@ function renderReport() {
   $('report').innerHTML = `
     <table><thead><tr><th></th><th>Diel</th><th>Rozmer</th><th>PLA</th><th>Kusy</th><th>Kontrola</th>${state.mode === 'split' ? '<th></th>' : ''}</tr></thead>
     <tbody>${rows.join('')}</tbody></table>
-    <p class="hint">Spolu približne <b>${total.toFixed(1)} g</b> PLA pri 100 % výplni, v praxi menej. Sieť ${result.voxel.toFixed(2)} mm.</p>
+    <p class="hint">Spolu približne <b>${total.toFixed(1)} g</b> PLA pri 100 % výplni, v praxi menej. Sieť ${result.voxel.toFixed(2)} mm, ${fmtInt(result.stats.triangles)} trojuholníkov${result.stats.limited ? ' (zjemnenie obmedzené limitom)' : ''}.</p>
     ${pinsHtml}`;
   for (const b of $('report').querySelectorAll('button[data-part]')) {
     b.onclick = () => download3MF('bambu', Number(b.dataset.part));
@@ -294,6 +299,10 @@ function setStatus(text, kind) {
 
 function esc(s) {
   return String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+}
+
+function fmtInt(n) {
+  return n.toLocaleString('sk-SK');
 }
 
 function slug(s) {
