@@ -11,6 +11,7 @@ final class App
 
     public function run(): void
     {
+        date_default_timezone_set((string) (Config::get()['timezone'] ?? 'Europe/Bratislava'));
         Auth::start();
         $this->i18n = I18n::fromRequest();
         $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';

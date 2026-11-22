@@ -66,8 +66,8 @@ final class Posts
 
     public static function setStatus(int $id, string $status): void
     {
-        Db::pdo()->prepare("UPDATE posts SET status = ?, published_at = CASE WHEN ? = 'published' THEN datetime('now') ELSE NULL END WHERE id = ?")
-            ->execute([$status, $status, $id]);
+        Db::pdo()->prepare("UPDATE posts SET status = ?, published_at = CASE WHEN ? = 'published' THEN ? ELSE NULL END WHERE id = ?")
+            ->execute([$status, $status, date('Y-m-d H:i:s'), $id]);
     }
 
     public static function delete(int $id): void
@@ -162,11 +162,11 @@ final class Posts
     {
         $st = Db::pdo()->prepare(
             "SELECT po.*, p.name AS project_name FROM posts po JOIN projects p ON p.id = po.project_id
-             WHERE po.evergreen = 1 AND po.status = 'published' AND po.published_at <= datetime('now', '-30 days')
+             WHERE po.evergreen = 1 AND po.status = 'published' AND po.published_at <= ?
                AND NOT EXISTS (SELECT 1 FROM posts c WHERE c.parent_id = po.id AND c.created_at > datetime('now', '-30 days'))
              ORDER BY coalesce(po.reactions, 0) + coalesce(po.clicks, 0) DESC, po.published_at LIMIT ?"
         );
-        $st->execute([$limit]);
+        $st->execute([date('Y-m-d H:i:s', strtotime('-30 days')), $limit]);
         return $st->fetchAll();
     }
 

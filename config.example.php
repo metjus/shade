@@ -6,4 +6,6 @@ return [
     'model'             => getenv('SHADE_MODEL') ?: 'claude-opus-5-5',
     // low | medium | high — vyššie = dôkladnejšie, ale pomalšie a drahšie
     'effort'            => getenv('SHADE_EFFORT') ?: 'medium',
+    // Časové pásmo pre „Dnes“, kalendár a termíny úloh
+    'timezone'          => 'Europe/Bratislava',
 ];

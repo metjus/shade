@@ -39,8 +39,8 @@ final class Tasks
     public static function toggle(int $id): ?int
     {
         $pdo = Db::pdo();
-        $pdo->prepare("UPDATE tasks SET done_at = CASE WHEN done_at IS NULL THEN datetime('now') ELSE NULL END WHERE id = ?")
-            ->execute([$id]);
+        $pdo->prepare('UPDATE tasks SET done_at = CASE WHEN done_at IS NULL THEN ? ELSE NULL END WHERE id = ?')
+            ->execute([date('Y-m-d H:i:s'), $id]);
         $st = $pdo->prepare('SELECT project_id FROM tasks WHERE id = ?');
         $st->execute([$id]);
         $pid = $st->fetchColumn();

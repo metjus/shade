@@ -56,7 +56,7 @@ final class Projects
         if (mb_strlen($data['description']) < 20) {
             $errors[] = 'description';
         }
-        if ($data['url'] !== '' && !filter_var($data['url'], FILTER_VALIDATE_URL)) {
+        if ($data['url'] !== '' && (!filter_var($data['url'], FILTER_VALIDATE_URL) || !preg_match('#^https?://#i', $data['url']))) {
             $errors[] = 'url';
         }
         return [$data, $errors];
