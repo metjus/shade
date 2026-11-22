@@ -1,0 +1,13 @@
+{
+    "name": "metjus/shade",
+    "description": "Shade – marketingový asistent pre malé projekty",
+    "type": "project",
+    "require": {
+        "php": ">=8.1",
+        "anthropic-ai/sdk": "^1.12",
+        "guzzlehttp/guzzle": "^8.6"
+    },
+    "autoload": {
+        "psr-4": { "Shade\\": "src/" }
+    }
+}
