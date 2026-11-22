@@ -20,15 +20,18 @@ final class DemoGenerator
         'other'    => ['facebook', 'instagram', 'reddit', 'newsletter'],
     ];
 
-    /** @return array<string,mixed> */
-    public function generate(Brief $b): array
+    /**
+     * @param array<string,mixed> $p
+     * @return array<string,mixed>
+     */
+    public function plan(array $p, string $lang): array
     {
-        $sk = $b->outputLang === 'sk';
-        $n = $b->name;
-        $link = $b->url !== '' ? $b->url : ($sk ? '[odkaz]' : '[link]');
-        $who = $b->audience !== '' ? $b->audience : ($sk ? 'ľudia, ktorým váš produkt rieši problém' : 'people whose problem your product solves');
-        $channels = self::CHANNELS_BY_TYPE[$b->type];
-        $firstSentence = trim((string) preg_split('/(?<=[.!?])\s/u', $b->description)[0]);
+        $sk = $lang === 'sk';
+        $n = $p['name'];
+        $link = $p['url'] !== '' ? $p['url'] : ($sk ? '[odkaz]' : '[link]');
+        $who = $p['audience'] !== '' ? $p['audience'] : ($sk ? 'ľudia, ktorým váš produkt rieši problém' : 'people whose problem your product solves');
+        $channels = self::CHANNELS_BY_TYPE[$p['type']];
+        $firstSentence = trim((string) preg_split('/(?<=[.!?])\s/u', $p['description'])[0]);
 
         $why = $sk
             ? ['Najväčší dosah pre tento typ produktu zadarmo.', 'Komunita, ktorá aktívne hľadá novinky.', 'Pravidelný kontakt a budovanie značky.', 'Doplnkový kanál na neskôr.']
@@ -90,5 +93,57 @@ final class DemoGenerator
         }
 
         return $out;
+    }
+
+    /**
+     * @param array<string,mixed> $p
+     * @param list<string> $channels
+     * @param list<string> $langs
+     * @return array{posts: list<array{channel:string, lang:string, text:string, tip:string}>}
+     */
+    public function repurpose(array $p, string $source, array $channels, array $langs): array
+    {
+        $short = mb_substr(trim(preg_replace('/\s+/u', ' ', $source)), 0, 220);
+        $posts = [];
+        foreach ($langs as $lang) {
+            $sk = $lang === 'sk';
+            foreach ($channels as $c) {
+                $text = match ($c) {
+                    'x' => $short . ($p['url'] !== '' ? "\n\n{$p['url']}" : ''),
+                    'reddit' => ($sk ? "Novinka z vývoja projektu {$p['name']}" : "Dev update on {$p['name']}") . "\n\n{$source}\n\n" . ($sk ? 'Čo si o tom myslíte?' : 'What do you think?'),
+                    'newsletter', 'blog' => ($sk ? "Ahojte,\n\n" : "Hi,\n\n") . $source,
+                    default => "{$short}\n\n#" . preg_replace('/[^\pL\pN]/u', '', $p['name']),
+                };
+                $posts[] = [
+                    'channel' => $c,
+                    'lang' => $lang,
+                    'text' => $text,
+                    'tip' => $sk ? 'Ukážkový režim: text je zo šablóny.' : 'Demo mode: this text is from a template.',
+                ];
+            }
+        }
+        return ['posts' => $posts];
+    }
+
+    /**
+     * @param array<string,mixed> $post
+     * @return array{posts: list<array{channel:string, lang:string, text:string, tip:string}>}
+     */
+    public function variants(array $post, int $count): array
+    {
+        $sk = $post['lang'] === 'sk';
+        $hooks = $sk
+            ? ['Otázka: ', 'Krátky príbeh: ', 'Odvážne tvrdenie: ']
+            : ['Question: ', 'Short story: ', 'Bold claim: '];
+        $out = [];
+        for ($i = 0; $i < $count; $i++) {
+            $out[] = [
+                'channel' => $post['channel'],
+                'lang' => $post['lang'],
+                'text' => $hooks[$i % 3] . $post['text'],
+                'tip' => $sk ? 'Ukážkový režim: variant zo šablóny.' : 'Demo mode: template variant.',
+            ];
+        }
+        return ['posts' => $out];
     }
 }

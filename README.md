@@ -1,65 +1,51 @@
 # shade.sk
 
-Marketingový asistent pre ľudí, ktorí nie sú marketéri: jednotlivcov, indie vývojárov a malé firmy,
-ktoré chcú zviditeľniť svoj web, softvér, hru alebo e-shop.
+Marketingový pracovný priestor pre vlastné projekty (web, softvér, hra…).
+Zatiaľ je určený pre jedného používateľa. Keď sa osvedčí, otvorí sa aj ostatným.
+Nástroj beží na subdoméne a na shade.sk zatiaľ ostáva úvodná stránka.
 
-## MVP (prvá verzia)
+## Čo vie
 
-Používateľ vyplní krátke zadanie:
+- **Profily projektov.** O čom projekt je, pre koho, tón, jazyky a ukážky tvojich príspevkov (hlas značky).
+  AI dostane profil pri každej požiadavke.
+- **Plán na 30 dní.** Pozicionovanie, kanály podľa priority a úlohy rozložené do 4 týždňov
+  s dátumami a odškrtávaním. Nový plán nadviaže na splnené úlohy, zverejnené príspevky a ich výsledky.
+- **Dnes.** Úlohy na dnes a meškajúce, príspevky naplánované na dnes, najbližších 7 dní
+  a stále aktuálne (evergreen) príspevky, ktoré sa oplatí zdieľať znova.
+- **Kalendár obsahu.** Mesačný prehľad naplánovaných konceptov a zverejnených príspevkov zo všetkých projektov.
+- **Banka nápadov.** Rýchly zápis nápadu, neskôr jedným klikom „Spraviť príspevky“. Pribúdajú aj z každého plánu.
+- **Jeden obsah do viacerých kanálov.** Z devlogu alebo novinky vzniknú príspevky pre vybrané kanály
+  a jazyky (SK/EN), každý podľa zvyklostí kanála a s tipom na zverejnenie.
+- **3 iné háčiky.** Varianty príspevku s iným úvodom na A/B test alebo opätovné zdieľanie.
+- **Výsledky.** Pri zverejnenom príspevku si zapíšeš zobrazenia, reakcie, kliky a poznámku.
+  Najlepšie príspevky AI zohľadní v ďalšom pláne.
+- **Orientačné časy zverejnenia** pre každý kanál.
 
-- názov a typ projektu (web, softvér, hra, e-shop, služba…), voliteľne URL,
-- čo to robí a pre koho to je,
-- hlavný cieľ na 30 dní a rozpočet (0 €, do 100 €, do 1 000 €),
-- jazyk výstupu (SK / EN).
+Inšpirované funkciami nástrojov Buffer, Hootsuite, Later, FeedHive a Publer (kalendár, AI texty podľa kanála,
+hlas značky, banka nápadov, recyklácia evergreen obsahu, jednoduchá analytika). Zámerne chýba automatické
+publikovanie na siete, spoločná schránka, sledovanie konkurencie a schvaľovanie, ktoré pre jedného človeka nie sú potrebné.
 
-Dostane na jednej stránke:
+## Technicky
 
-1. **Pozicionovanie**: jedna veta, čo produkt je, hlavné prínosy a tón komunikácie.
-2. **Cieľové skupiny** a kde ich nájsť.
-3. **3–5 kanálov** zoradených podľa priority, s dôvodom a prvým krokom.
-4. **Plán na 30 dní** po týždňoch, s úlohami na odškrtnutie.
-5. **8–10 nápadov na obsah**.
-6. **Hotové príspevky** pre top 3 kanály, s tlačidlom Kopírovať.
-7. **Rýchle výhry**, ktoré sa dajú urobiť ešte dnes.
-
-Plán sa dá vytlačiť alebo uložiť ako PDF. Nič sa neukladá na server; rozpísané zadanie si pamätá len prehliadač.
-
-Mimo MVP (nápady na ďalšie kroky): účty a uložené plány, analýza existujúceho webu z URL,
-kalendár publikovania, priame publikovanie na siete, sledovanie výsledkov, platené plány.
-
-## Jazyky (i18n)
-
-UI je pripravené na viac jazykov. Preklady sú v `lang/<kod>.json` (zatiaľ `sk` a `en`).
-Jazyk sa vyberá cez `?lang=`, cookie alebo hlavičku prehliadača (čeština dostane slovenčinu).
-Jazyk výstupu plánu sa volí zvlášť, takže slovenský tvorca si môže nechať vygenerovať anglické príspevky
-pre zahraničné publikum. Nový jazyk = nový JSON súbor + kód v `Shade\I18n::SUPPORTED` + možnosť vo formulári.
-
-## Ako to funguje
-
-- PHP 8.1+, bez frameworku, beží na bežnom webhostingu (napr. Websupport).
-- `public/` je koreň webu: `index.php` (formulár), `assets/` (JS, CSS), `api/generate.php` (JSON API).
-- `src/ClaudeGenerator.php` volá Claude API cez oficiálne PHP SDK so štruktúrovaným JSON výstupom
-  (schéma v `src/PlanSchema.php`). Ak model požiadavku odmietne, server ju skúsi na záložnom modeli
-  (`fallbacks: "default"`).
-- `src/DemoGenerator.php` vráti šablónový plán, keď nie je nastavený API kľúč. Prototyp sa tak dá
-  vyskúšať hneď a zadarmo.
+- PHP 8.1+ bez frameworku, SQLite (`data/shade.sqlite`, vytvorí sa sama), document root `public/`.
+- AI: Claude API cez oficiálne PHP SDK, štruktúrovaný JSON výstup. Bez API kľúča beží ukážkový režim so šablónami.
+- UI v slovenčine a angličtine (`lang/*.json`), ďalší jazyk = ďalší súbor.
 
 ## Spustenie lokálne
 
 ```bash
 composer install
-php -S localhost:8000 -t public
+php bin/set-password.php            # nastaví heslo do aplikácie
+cp config.example.php config.php    # doplň ANTHROPIC kľúč (bez neho ukážkový režim)
+php -S localhost:8000 -t public public/router.php
 ```
 
-Bez kľúča beží DEMO režim. Pre AI režim:
+V `config.php` je model (`claude-opus-5-5` predvolene) a `effort`. Lacnejšia voľba je napríklad
+`claude-sonnet-5-5` alebo `claude-haiku-5-5`. V konzole Anthropicu si nastav mesačný limit výdavkov.
 
-```bash
-cp config.example.php config.php   # a doplň kľúč, alebo nastav premennú ANTHROPIC_API_KEY
-```
+## Nasadenie na subdoménu
 
-V `config.php` sa dá zmeniť model (`claude-opus-5-5` predvolene) a `effort` (`low` je rýchlejší a lacnejší).
-
-## Nasadenie
-
-Nahraj celý repozitár (vrátane `vendor/` po `composer install --no-dev`) a nastav document root na `public/`.
-`config.php` nikdy necommituj.
+1. Nahraj repozitár aj s `vendor/` (po `composer install --no-dev`).
+2. Document root subdomény nastav na `public/` (Apache použije `public/.htaccess`).
+3. Na serveri spusti `php bin/set-password.php` a vytvor `config.php`.
+4. Priečinok `data/` musí byť zapisovateľný pre PHP a nesmie byť verejne dostupný (je mimo `public/`).
